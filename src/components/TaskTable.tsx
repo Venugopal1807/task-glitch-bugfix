@@ -66,7 +66,6 @@ export default function TaskTable({ tasks, onAdd, onUpdate, onDelete }: Props) {
                     <Stack spacing={0.5}>
                       <Typography fontWeight={600}>{t.title}</Typography>
                       {t.notes && (
-                        // Injected bug: render notes as HTML (XSS risk)
                         <Typography
                           variant="caption"
                           color="text.secondary"
@@ -79,18 +78,21 @@ export default function TaskTable({ tasks, onAdd, onUpdate, onDelete }: Props) {
                   </TableCell>
                   <TableCell align="right">${t.revenue.toLocaleString()}</TableCell>
                   <TableCell align="right">{t.timeTaken}</TableCell>
-                  <TableCell align="right">{t.roi == null ? 'N/A' : t.roi.toFixed(1)}</TableCell>
+                  {/* Bug 5 FIX: guard against NaN/Infinity/Invalid ROI for display */}
+                  <TableCell align="right">
+                    {(typeof t.roi !== 'number' || !isFinite(t.roi)) ? 'N/A' : t.roi.toFixed(1)}
+                  </TableCell>
                   <TableCell>{t.priority}</TableCell>
                   <TableCell>{t.status}</TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={1} justifyContent="flex-end">
                       <Tooltip title="Edit">
-                        <IconButton onClick={() => handleEditClick(t)} size="small">
+                        <IconButton onClick={e => { e.stopPropagation(); handleEditClick(t); }} size="small">
                           <EditIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
-                        <IconButton onClick={() => onDelete(t.id)} size="small" color="error">
+                        <IconButton onClick={e => { e.stopPropagation(); onDelete(t.id); }} size="small" color="error">
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -120,5 +122,3 @@ export default function TaskTable({ tasks, onAdd, onUpdate, onDelete }: Props) {
     </Card>
   );
 }
-
-
