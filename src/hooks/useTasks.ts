@@ -95,9 +95,20 @@ export function useTasks(): UseTasksState {
   // Removed opportunistic second fetch that caused duplication!
 
   const derivedSorted = useMemo<DerivedTask[]>(() => {
-    const withRoi = tasks.map(withDerived);
-    return sortDerived(withRoi);
-  }, [tasks]);
+  const withRoi = tasks.map(withDerived);
+  // Stable sort: first by ROI descending, then by priority, then by title alphabetically
+  return [...withRoi].sort((a, b) => {
+    // ROI descending
+    if (b.roi !== a.roi) return b.roi - a.roi;
+    // Priority Strict Order High > Medium > Low
+    const PRIORITY = { 'High': 2, 'Medium': 1, 'Low': 0 };
+    if (PRIORITY[b.priority] !== PRIORITY[a.priority])
+      return PRIORITY[b.priority] - PRIORITY[a.priority];
+    // Tie-breaker: Title, case-insensitive
+    return a.title.localeCompare(b.title);
+  });
+}, [tasks]);
+
 
   const metrics = useMemo<Metrics>(() => {
     if (tasks.length === 0) return INITIAL_METRICS;
