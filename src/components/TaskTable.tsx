@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Box, Button, Card, CardContent, IconButton, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, IconButton, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography, Snackbar } from '@mui/material';
+import MuiAlert from '@mui/material/Alert';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -19,6 +20,10 @@ export default function TaskTable({ tasks, onAdd, onUpdate, onDelete }: Props) {
   const [editing, setEditing] = useState<Task | null>(null);
   const [details, setDetails] = useState<Task | null>(null);
 
+  // Bug 2 fix: Undo snackbar state
+  const [undoOpen, setUndoOpen] = useState(false);
+  const [deletedTask, setDeletedTask] = useState<Task | null>(null);
+
   const existingTitles = useMemo(() => tasks.map(t => t.title), [tasks]);
 
   const handleAddClick = () => {
@@ -28,6 +33,13 @@ export default function TaskTable({ tasks, onAdd, onUpdate, onDelete }: Props) {
   const handleEditClick = (task: Task) => {
     setEditing(task);
     setOpenForm(true);
+  };
+
+  // Updated for Bug 2: Use new handler to manage deletion and undo
+  const handleDeleteClick = (task: Task) => {
+    setDeletedTask(task);
+    onDelete(task.id);
+    setUndoOpen(true);
   };
 
   const handleSubmit = (value: Omit<Task, 'id'> & { id?: string }) => {
@@ -90,7 +102,7 @@ export default function TaskTable({ tasks, onAdd, onUpdate, onDelete }: Props) {
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
-                        <IconButton onClick={() => onDelete(t.id)} size="small" color="error">
+                        <IconButton onClick={() => handleDeleteClick(t)} size="small" color="error">
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -117,8 +129,43 @@ export default function TaskTable({ tasks, onAdd, onUpdate, onDelete }: Props) {
         initial={editing}
       />
       <TaskDetailsDialog open={!!details} task={details} onClose={() => setDetails(null)} onSave={onUpdate} />
+      {/* Bug 2 Fix: Undo Snackbar */}
+      <Snackbar
+        open={undoOpen}
+        autoHideDuration={4000}
+        onClose={() => {
+          setUndoOpen(false);
+          setDeletedTask(null); // Reset deleted state for correctness
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={() => {
+            setUndoOpen(false);
+            setDeletedTask(null);
+          }}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => {
+                if (deletedTask) {
+                  onAdd(deletedTask);
+                  setDeletedTask(null);
+                  setUndoOpen(false);
+                }
+              }}
+            >
+              UNDO
+            </Button>
+          }
+          severity="info"
+        >
+          Task deleted.
+        </MuiAlert>
+      </Snackbar>
     </Card>
   );
 }
-
-
